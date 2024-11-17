@@ -4,17 +4,12 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { generateVerificationToken } from "@/app/actions/verification";
 
 export default function LandingPage() {
   const { connected, publicKey } = useWallet();
-  const [hasBackpack, setHasBackpack] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-
-  useEffect(() => {
-    setHasBackpack('backpack' in window);
-  }, []);
 
   const handleVerify = useCallback(async () => {
     if (!publicKey) return;
@@ -23,14 +18,12 @@ export default function LandingPage() {
     try {
       await generateVerificationToken(publicKey.toString());
       
-      // Call verify endpoint with the userId
       const response = await fetch('/api/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ userId: publicKey.toString() }),
-        // The token is now in the cookies, so we don't need to send it explicitly
       });
 
       if (!response.ok) {
@@ -56,8 +49,16 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Background image with stars */}
-      <div className="absolute inset-0 bg-[url('/stars-bg.jpg')] bg-cover bg-center" />
+      {/* Background image with everything */}
+      <div className="absolute inset-0">
+        <Image
+          src="/assets/background.jpg"
+          alt="Space background"
+          fill
+          className="object-cover"
+          priority
+        />
+      </div>
       
       {/* Wallet Button - Fixed top right */}
       <div className="absolute top-4 right-4 z-20">
@@ -68,12 +69,13 @@ export default function LandingPage() {
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-20 pb-8 flex flex-col items-center justify-center min-h-screen">
         {/* Logo and titles */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold" style={{ color: '#FF4B4B' }}>
-            The First Landing
-          </h1>
-          <h2 className="text-xl md:text-2xl mt-2 text-white">
-            An Eclipse Odyssey
-          </h2>
+          <Image
+            src="/assets/firstlandinglogo.png"
+            alt="The First Landing"
+            width={400}
+            height={100}
+            className="mx-auto mb-4"
+          />
         </div>
 
         {/* Main content area */}
@@ -138,19 +140,26 @@ export default function LandingPage() {
         <div className="absolute bottom-4 w-full px-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Image 
-              src="/backpack-logo.png" 
+              src="/assets/backpack.png" 
               alt="Backpack" 
               width={120} 
               height={30}
               className="object-contain"
             />
           </div>
-          <div className="text-sm text-gray-400">
-            powered by VALIDATORS
+          <div className="text-sm text-gray-400 flex items-center gap-2">
+            powered by{" "}
+            <Image 
+              src="/assets/validatorswordmark.png" 
+              alt="VALIDATORS" 
+              width={100} 
+              height={20}
+              className="object-contain"
+            />
           </div>
           <div className="flex items-center space-x-2">
             <Image 
-              src="/eclipse-logo.png" 
+              src="/assets/eclipse.png" 
               alt="Eclipse" 
               width={120} 
               height={30}
