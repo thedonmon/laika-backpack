@@ -66,7 +66,7 @@ export default function LandingPage() {
       </div>
       
       {/* Content container */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-20 pb-8 flex flex-col items-center justify-center min-h-screen">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-4 pb-8 flex flex-col items-center justify-center min-h-screen">
         {/* Logo and titles */}
         <div className="text-center mb-12">
           <Image
@@ -79,7 +79,7 @@ export default function LandingPage() {
         </div>
 
         {/* Main content area */}
-        <div className="w-full max-w-md space-y-6">
+        <div className="w-full max-w-md space-y-6 mb-12">
           {/* Steps */}
           <div className="space-y-4">
             {/* Always show Backpack download */}
