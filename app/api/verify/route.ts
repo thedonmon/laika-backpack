@@ -54,7 +54,12 @@ export async function POST(request: Request) {
     //   balances: {...}
     // })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      verified: true,
+      bridgeCompleted: false, 
+      purchaseCompleted: false,
+      timestamp: Date.now()
+    })
   } catch (error) {
     console.error('Verification error:', error)
     return NextResponse.json(
