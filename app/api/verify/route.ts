@@ -1,70 +1,41 @@
-import { jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { PublicKey } from '@solana/web3.js'
-import { Connection } from '@solana/web3.js'
-import nacl from 'tweetnacl'
-import bs58 from 'bs58'
-
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET_KEY!)
-const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com')
+import { upsertUser, getUserByWallet, updateUserVerification } from '@/app/actions/database'
+import { checkBridgeBalance, checkLaikaBalance } from '@/app/actions/verification'
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = cookies()
-    const token = cookieStore.get('verification_token')
     const body = await request.json()
+    const { userId, signature, message, timestamp } = body
 
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Verification token missing' },
-        { status: 401 }
-      )
-    }
-
-    const { payload } = await jwtVerify(token.value, SECRET_KEY)
-    
-    // Verify signature
-    const publicKey = new PublicKey(body.userId)
-    const message = Buffer.from(body.message, 'base64')
-    const signature = bs58.decode(body.signature)
-
-    const isValid = nacl.sign.detached.verify(
-      message,
+    // First, create/update the user record
+    await upsertUser({
+      wallet: userId,
       signature,
-      publicKey.toBytes()
-    )
+      message,
+      datetimestamp: timestamp
+    })
 
-    if (!isValid || payload.userId !== body.userId) {
-      return NextResponse.json(
-        { error: 'Invalid verification' },
-        { status: 401 }
-      )
-    }
+    // Then check bridge and token balances (implement these functions based on your needs)
+    const bridgeBalance = await checkBridgeBalance(userId)
+    const laikaBalance = await checkLaikaBalance(userId)
 
-    // TODO: Add balance checks here
-    // Bridge check
-    // const balance = await connection.getBalance(publicKey)
-    // const tokenBalance = await connection.getTokenAccountBalance(...)
-    
-    // TODO: Store verification in database
-    // await db.verifications.create({
-    //   publicKey: publicKey.toString(),
-    //   timestamp: Date.now(),
-    //   balances: {...}
-    // })
+    // Update the verification status
+    await updateUserVerification(userId, bridgeBalance, laikaBalance)
+
+    // Get the latest user data to return
+    const userData = await getUserByWallet(userId)
 
     return NextResponse.json({
       verified: true,
-      bridgeCompleted: false, 
-      purchaseCompleted: false,
+      bridgeCompleted: userData.met_bridge_req || false,
+      purchaseCompleted: (userData.last_known_laika_balance || 0) > 0,
       timestamp: Date.now()
     })
   } catch (error) {
     console.error('Verification error:', error)
     return NextResponse.json(
-      { error: 'Verification failed', details: error },
-      { status: 401 }
+      { error: 'Verification failed' },
+      { status: 400 }
     )
   }
-} 
+}

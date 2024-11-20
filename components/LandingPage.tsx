@@ -22,6 +22,21 @@ export default function LandingPage() {
   const [bridgeCompleted, setBridgeCompleted] = useState(false);
   const [purchaseCompleted, setPurchaseCompleted] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [userStatus, setUserStatus] = useState<{
+    userExists: boolean;
+    hasBackpack: boolean;
+    isVerified: boolean;
+    bridge: {
+      status: 'none' | 'pending' | 'partial' | 'complete';
+      message: string;
+      usdValue: number;
+    };
+    laika: {
+      hasAccount: boolean;
+      balance: number;
+    };
+  } | null>(null);
+
   useEffect(() => {
     if (!connected) {
       setProgress(0);
@@ -30,24 +45,28 @@ export default function LandingPage() {
 
     let currentProgress = 0;
 
+    // Step 1: Backpack connected (20%)
     if (connectedAdapter === 'Backpack') {
-      currentProgress = 25;
+      currentProgress += 20;
     }
     
+    // Step 2: Verified (additional 10%)
     if (isVerified) {
-      currentProgress = 50;
+      currentProgress += 10;
     }
     
-    if (bridgeCompleted) {
-      currentProgress = 75;
+    // Step 3: Bridge completed (35%) - only count if meets requirement
+    if (userStatus?.bridge.status === 'complete' && userStatus.bridge.usdValue >= 490) {
+      currentProgress += 35;
     }
     
+    // Step 4: Purchase completed (35%)
     if (purchaseCompleted) {
-      currentProgress = 100;
+      currentProgress += 35;
     }
 
     setProgress(currentProgress);
-  }, [connected, connectedAdapter, isVerified, bridgeCompleted, purchaseCompleted]);
+  }, [connected, connectedAdapter, isVerified, userStatus, purchaseCompleted]);
 
   useEffect(() => {
     if (wallet && connected) {
@@ -58,13 +77,38 @@ export default function LandingPage() {
     }
   }, [wallet, connected]);
 
+  useEffect(() => {
+    async function loadUserData() {
+      if (!publicKey) return;
+      
+      try {
+        const response = await fetch(`/api/user/${publicKey.toString()}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          setUserStatus(data.verification);
+          setIsVerified(data.verification.isVerified);
+          setBridgeCompleted(data.verification.bridge.status === 'complete');
+          setPurchaseCompleted(data.verification.laika.balance > 0);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+
+    if (connected && publicKey) {
+      loadUserData();
+    }
+  }, [connected, publicKey]);
+
   const handleVerify = useCallback(async () => {
     if (!publicKey || !signMessage) return;
     
     setIsVerifying(true);
     try {
       // Create message to sign
-      const message = `Verify wallet ownership for Eclipse Odyssey\nWallet: ${publicKey.toString()}\nTimestamp: ${Date.now()}`;
+      const timestamp = Date.now();
+      const message = `Verify wallet ownership for Eclipse Odyssey\nWallet: ${publicKey.toString()}\nTimestamp: ${timestamp}`;
       const messageBytes = new TextEncoder().encode(message);
       
       // Get signature
@@ -81,7 +125,8 @@ export default function LandingPage() {
         body: JSON.stringify({ 
           userId: publicKey.toString(),
           signature: bs58.encode(signature),
-          message: Buffer.from(messageBytes).toString('base64')
+          message: Buffer.from(messageBytes).toString('base64'),
+          timestamp: timestamp
         }),
       });
 
@@ -152,7 +197,11 @@ export default function LandingPage() {
           {/* Steps with Progress */}
           <Progress 
             value={progress}
-            className="w-full h-2 mb-6 bg-gray-200 border border-gray-100"
+            className="w-full h-2 mb-6 bg-gray-800/50 backdrop-blur-sm border border-gray-700"
+            style={{
+              '--progress-background': 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)',
+              '--progress-glow': '0 0 8px rgba(34, 197, 94, 0.3)'
+            } as React.CSSProperties}
           />
           
           <div className="space-y-4">
@@ -205,12 +254,41 @@ export default function LandingPage() {
                     <CardTitle className="text-white">Bridge Assets</CardTitle>
                   </CardHeader>
                   <CardContent className="text-center">
-                    <p className="text-gray-300">
-                      Bridge over $500 on ETH to Eclipse using the{" "}
-                      <a href="your-bridge-url" className="text-blue-400 hover:underline">
-                        official bridge
-                      </a>
-                    </p>
+                    {userStatus?.userExists ? (
+                      // Show user-specific bridge status if we have user data
+                      <>
+                        <p className="text-gray-300">
+                          {userStatus.bridge.message}
+                        </p>
+                        {userStatus.bridge.status === 'partial' && (
+                          <p className="text-yellow-400 mt-2">
+                            Current bridge amount: ${userStatus.bridge.usdValue.toFixed(2)}
+                          </p>
+                        )}
+                        <a 
+                      href="https://app.eclipse.xyz/bridge" 
+                      className="text-blue-400 hover:underline block mt-2"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Go to bridge
+                    </a>
+                      </>
+                    ) : (
+                      // Show default message if no user data exists yet
+                      <p className="text-gray-300">
+                        Bridge over $500 on ETH to Eclipse using the{" "}
+                        <a 
+                          href="https://app.eclipse.xyz/bridge" 
+                          className="text-blue-400 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          official bridge
+                        </a>
+                      </p>
+                    )}
+                    
                   </CardContent>
                 </Card>
 
@@ -251,13 +329,47 @@ export default function LandingPage() {
               </CardHeader>
               <CardContent className="text-center">
                 {connected ? (
-                  <Button
-                    onClick={handleVerify}
-                    disabled={isVerifying}
-                    className="bg-[hsl(120,100%,88%)] text-black hover:bg-[hsl(120,100%,78%)] px-8 py-2 rounded-full"
-                  >
-                    {isVerifying ? 'Verifying...' : 'VERIFY'}
-                  </Button>
+                  <>
+                    <Button
+                      onClick={handleVerify}
+                      disabled={isVerifying || connectedAdapter !== 'Backpack'}
+                      className="bg-[hsl(120,100%,88%)] text-black hover:bg-[hsl(120,100%,78%)] px-8 py-2 rounded-full"
+                    >
+                      {isVerifying ? 'Verifying...' : isVerified ? 'VERIFY AGAIN' : 'VERIFY'}
+                    </Button>
+                    
+                    {isVerified && !bridgeCompleted && (
+                      <div className="mt-4 text-sm text-gray-300">
+                        {userStatus?.bridge.status === 'pending' ? (
+                          <p>
+                            If you recently bridged assets, please note that it may take up to 30 minutes 
+                            for transactions to be indexed. Feel free to verify again shortly. Otherwise, Stats will be calculated at the end of the campaign regardless if you verify again or not.
+                          </p>
+                        ) : userStatus?.bridge.status === 'partial' ? (
+                          <p>
+                            You can verify again after bridging the remaining amount.
+                            Remember that new transactions may take up to 30 minutes to be indexed.
+                            Stats will be calculated at the end of the campaign regardless if you verify again or not.
+                          </p>
+                        ) : (
+                          <p>
+                            No bridge transactions found yet. After bridging, you can wait up to 30 minutes 
+                            for the transaction to be indexed before verifying again.
+                            Stats will be calculated at the end of the campaign regardless if you verify again or not.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* {isVerified && bridgeCompleted && !purchaseCompleted && (
+                      <div className="mt-4 text-sm text-gray-300">
+                        <p>
+                          Bridge requirement met! You can verify again after purchasing $LAIKA 
+                          to complete all steps.
+                        </p>
+                      </div>
+                    )} */}
+                  </>
                 ) : (
                   <div className="text-gray-400 italic">
                     Please connect your wallet using the button above
