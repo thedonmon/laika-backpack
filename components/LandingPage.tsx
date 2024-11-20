@@ -190,6 +190,9 @@ export default function LandingPage() {
             height={100}
             className="mx-auto mb-4"
           />
+          <h3 className="text-2xl text-gray-300 font-light">
+            A Co-op Campaign to onboard Backpack users to Eclipse and LAIKA
+          </h3>
         </div>
         
         {/* Cards section */}
