@@ -3,6 +3,7 @@ import "@/app/styles/wallet-adapter.css";
 import "@/app/globals.css";
 import { Toaster } from "@/components/ui/sonner"
 import { Metadata } from 'next'
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 export const metadata: Metadata = {
   title: 'The First Landing |  Eclipse × Backpack × $LAIKA',
@@ -50,6 +51,7 @@ export default function RootLayout({
         </BackpackWalletProvider>
         <Toaster/>
       </body>
+      <GoogleAnalytics gaId="G-4B6HX12H8R" />
     </html>
   );
 }
