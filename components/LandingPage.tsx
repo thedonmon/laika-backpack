@@ -187,12 +187,6 @@ Join the Quest, get rewards: firstlanding.laika.is
           <h3 className="text-2xl text-gray-300 font-light">
             Embark on an expedition to Eclipse to claim your LAIKA rewards.
           </h3>
-          <p className="text-lg text-gray-400">
-            Verified wallets are eligible for a share of{" "}
-            <span className="text-green-400 font-semibold">
-              5 Billion $LAIKA
-            </span>
-          </p>
         </div>
 
         {/* Cards section */}
