@@ -158,13 +158,14 @@ Join the Quest, get rewards: firstlanding.laika.is
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col">
       {/* Background image */}
-      <div className="absolute inset-0">
+      <div className="fixed inset-0 w-full h-full">
         <Image
           src="/assets/background.jpg"
           alt="Space background"
           fill
           className="object-cover"
           priority
+          sizes="100vw"
         />
       </div>
 
