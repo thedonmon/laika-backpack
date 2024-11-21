@@ -92,7 +92,7 @@ export async function checkBridgeBalance(userId: string): Promise<BridgeResult> 
     FROM
       price_at_transfer
     WHERE 
-      receiving_wallet = '${userId}'
+      receiving_wallet = '${userId}' AND last_transfer_timestamp >= last_transfer_timestamp >= '11/20/2024'
     ORDER BY
       last_transfer_timestamp DESC;
   `;

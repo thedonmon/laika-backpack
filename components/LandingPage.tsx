@@ -20,7 +20,6 @@ export default function LandingPage() {
   const [connectedAdapter, setConnectedAdapter] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
   const [bridgeCompleted, setBridgeCompleted] = useState(false);
-  const [purchaseCompleted, setPurchaseCompleted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [userStatus, setUserStatus] = useState<{
     userExists: boolean;
@@ -45,28 +44,23 @@ export default function LandingPage() {
 
     let currentProgress = 0;
 
-    // Step 1: Backpack connected (20%)
+    // Step 1: Backpack connected (25%)
     if (connectedAdapter === 'Backpack') {
-      currentProgress += 20;
+      currentProgress += 25;
     }
     
-    // Step 2: Verified (additional 10%)
+    // Step 2: Verified (25%)
     if (isVerified) {
-      currentProgress += 10;
+      currentProgress += 25;
     }
     
-    // Step 3: Bridge completed (35%) - only count if meets requirement
+    // Step 3: Bridge completed (50%) - only count if meets requirement
     if (userStatus?.bridge.status === 'complete' && userStatus.bridge.usdValue >= 490) {
-      currentProgress += 35;
-    }
-    
-    // Step 4: Purchase completed (35%)
-    if (purchaseCompleted) {
-      currentProgress += 35;
+      currentProgress += 50;
     }
 
     setProgress(currentProgress);
-  }, [connected, connectedAdapter, isVerified, userStatus, purchaseCompleted]);
+  }, [connected, connectedAdapter, isVerified, userStatus]);
 
   useEffect(() => {
     if (wallet && connected) {
@@ -89,7 +83,6 @@ export default function LandingPage() {
           setUserStatus(data.verification);
           setIsVerified(data.verification.isVerified);
           setBridgeCompleted(data.verification.bridge.status === 'complete');
-          setPurchaseCompleted(data.verification.laika.balance > 0);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -140,7 +133,6 @@ export default function LandingPage() {
       // Update verification states based on response
       setIsVerified(true);
       setBridgeCompleted(data.bridgeCompleted || false);
-      setPurchaseCompleted(data.purchaseCompleted || false);
       toast.success('Verification successful');
     } catch (error) {
       toast.error('Verification failed');
@@ -152,7 +144,9 @@ export default function LandingPage() {
 
   const handleShareTweet = () => {
     const tweetText = encodeURIComponent(
-      "Just started my Eclipse Odyssey! 🚀✨ #FirstLanding #EclipseOdyssey"
+      `I just landed on @EclipseFND with @laikaoneclipse in my @Backpack, ready to ECLIPSE EVERYTHING.
+Join the Quest, get rewards: firstlanding.laika.is 
+#AnEclipseOdyssey`
     );
     window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, '_blank');
   };
@@ -191,7 +185,7 @@ export default function LandingPage() {
             className="mx-auto mb-4"
           />
           <h3 className="text-2xl text-gray-300 font-light">
-            A Co-op Campaign to onboard Backpack users to Eclipse and LAIKA
+          A Co-op Campaign to onboard Backpack users to Eclipse with LAIKA rewards
           </h3>
         </div>
         
@@ -296,90 +290,72 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className={`border transition-all duration-200 ${
-                  purchaseCompleted ? 'border-green-500 bg-black/50' : 'border-gray-700 bg-black/30'
+                  isVerified ? 'border-green-500 bg-black/50' : 'border-gray-700 bg-black/30'
                 }`}>
                   <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                      <span className="text-white">3</span>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      isVerified ? 'bg-green-500' : 'bg-gray-700'
+                    }`}>
+                      {isVerified ? (
+                        <CheckCircle2 className="w-5 h-5 text-black" />
+                      ) : (
+                        <span className="text-white">3</span>
+                      )}
                     </div>
-                    <CardTitle className="text-white">Buy $LAIKA</CardTitle>
+                    <CardTitle className="text-white">Connect & Verify</CardTitle>
                   </CardHeader>
                   <CardContent className="text-center">
-                    <p className="text-gray-300">
-                      Buy $LAIKA on{" "}
-                      <a href="https://orca.so" className="text-blue-400 hover:underline">
-                        orca.so
-                      </a>
-                    </p>
+                    {connected ? (
+                      <>
+                        <Button
+                          onClick={handleVerify}
+                          disabled={isVerifying || connectedAdapter !== 'Backpack'}
+                          className="bg-[hsl(120,100%,88%)] text-black hover:bg-[hsl(120,100%,78%)] px-8 py-2 rounded-full"
+                        >
+                          {isVerifying ? 'Verifying...' : isVerified ? 'VERIFY AGAIN' : 'VERIFY'}
+                        </Button>
+                        
+                        {isVerified && !bridgeCompleted && (
+                          <div className="mt-4 text-sm text-gray-300">
+                            {userStatus?.bridge.status === 'pending' ? (
+                              <p>
+                                If you recently bridged assets, please note that it may take up to 30 minutes 
+                                for transactions to be indexed. Feel free to verify again shortly. Otherwise, Stats will be calculated at the end of the campaign regardless if you verify again or not.
+                              </p>
+                            ) : userStatus?.bridge.status === 'partial' ? (
+                              <p>
+                                You can verify again after bridging the remaining amount.
+                                Remember that new transactions may take up to 30 minutes to be indexed.
+                                Stats will be calculated at the end of the campaign regardless if you verify again or not.
+                              </p>
+                            ) : (
+                              <p>
+                                No bridge transactions found yet. After bridging, you can wait up to 30 minutes 
+                                for the transaction to be indexed before verifying again.
+                                Stats will be calculated at the end of the campaign regardless if you verify again or not.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* {isVerified && bridgeCompleted && !purchaseCompleted && (
+                          <div className="mt-4 text-sm text-gray-300">
+                            <p>
+                              Bridge requirement met! You can verify again after purchasing $LAIKA 
+                              to complete all steps.
+                            </p>
+                          </div>
+                        )} */}
+                      </>
+                    ) : (
+                      <div className="text-gray-400 italic">
+                        Please connect your wallet using the button above
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </>
             )}
-            <Card className={`border transition-all duration-200 ${
-              isVerified ? 'border-green-500 bg-black/50' : 'border-gray-700 bg-black/30'
-            }`}>
-              <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  isVerified ? 'bg-green-500' : 'bg-gray-700'
-                }`}>
-                  {isVerified ? (
-                    <CheckCircle2 className="w-5 h-5 text-black" />
-                  ) : (
-                    <span className="text-white">4</span>
-                  )}
-                </div>
-                <CardTitle className="text-white">Connect & Verify</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                {connected ? (
-                  <>
-                    <Button
-                      onClick={handleVerify}
-                      disabled={isVerifying || connectedAdapter !== 'Backpack'}
-                      className="bg-[hsl(120,100%,88%)] text-black hover:bg-[hsl(120,100%,78%)] px-8 py-2 rounded-full"
-                    >
-                      {isVerifying ? 'Verifying...' : isVerified ? 'VERIFY AGAIN' : 'VERIFY'}
-                    </Button>
-                    
-                    {isVerified && !bridgeCompleted && (
-                      <div className="mt-4 text-sm text-gray-300">
-                        {userStatus?.bridge.status === 'pending' ? (
-                          <p>
-                            If you recently bridged assets, please note that it may take up to 30 minutes 
-                            for transactions to be indexed. Feel free to verify again shortly. Otherwise, Stats will be calculated at the end of the campaign regardless if you verify again or not.
-                          </p>
-                        ) : userStatus?.bridge.status === 'partial' ? (
-                          <p>
-                            You can verify again after bridging the remaining amount.
-                            Remember that new transactions may take up to 30 minutes to be indexed.
-                            Stats will be calculated at the end of the campaign regardless if you verify again or not.
-                          </p>
-                        ) : (
-                          <p>
-                            No bridge transactions found yet. After bridging, you can wait up to 30 minutes 
-                            for the transaction to be indexed before verifying again.
-                            Stats will be calculated at the end of the campaign regardless if you verify again or not.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* {isVerified && bridgeCompleted && !purchaseCompleted && (
-                      <div className="mt-4 text-sm text-gray-300">
-                        <p>
-                          Bridge requirement met! You can verify again after purchasing $LAIKA 
-                          to complete all steps.
-                        </p>
-                      </div>
-                    )} */}
-                  </>
-                ) : (
-                  <div className="text-gray-400 italic">
-                    Please connect your wallet using the button above
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
 
           {/* Share button */}
