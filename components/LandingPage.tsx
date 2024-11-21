@@ -185,7 +185,7 @@ Join the Quest, get rewards: firstlanding.laika.is
             className="mx-auto mb-4"
           />
           <h3 className="text-2xl text-gray-300 font-light">
-          A Co-op Campaign to onboard Backpack users to Eclipse with LAIKA rewards
+          Embark on an expedition to Eclipse to claim your LAIKA rewards.
           </h3>
         </div>
         
