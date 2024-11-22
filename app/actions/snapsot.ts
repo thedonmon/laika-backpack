@@ -33,9 +33,15 @@ async function getLatestSignature() {
 
 async function processTransaction(confirmedSignatureInfo: any, bridgeWallets: Map<string, any>) {
   const txn = await connection.getParsedTransaction(confirmedSignatureInfo.signature);
-  if (!txn || txn.transaction.message.accountKeys.length <= 1) return;
+  if (!txn || txn.transaction.message.accountKeys.length <= 2) return;
 
-  const bridgeWallet = txn.transaction.message.accountKeys[1].pubkey.toBase58();
+  // Check if the first instruction is CreateAccount
+  const firstInstruction = txn.transaction.message.instructions[0];
+  const bridgeWalletIndex = ('parsed' in firstInstruction && 
+    firstInstruction.program === "system" && 
+    firstInstruction.parsed?.type === "createAccount") ? 2 : 1;
+
+  const bridgeWallet = txn.transaction.message.accountKeys[bridgeWalletIndex].pubkey.toBase58();
   const txnDate = new Date(confirmedSignatureInfo.blockTime! * 1000);
 
   let bridgedAmountInLamports = 0;
@@ -84,15 +90,17 @@ async function processTransaction(confirmedSignatureInfo: any, bridgeWallets: Ma
   // Insert into Supabase
   const { error } = await supabase
     .from('bridge_transactions')
-    .insert({
+    .upsert({
       signature: confirmedSignatureInfo.signature,
       bridge_wallet: bridgeWallet,
       created_at: txnDate.toISOString(),
       bridged_amount_lamports: bridgedAmountInLamports
+    }, {
+      onConflict: 'signature'  // signature should be your unique constraint column
     });
 
   if (error) {
-    console.error('Error inserting transaction:', error);
+    console.error('Error upserting transaction:', error);
   }
 
   console.log(`Processed: ${confirmedSignatureInfo.signature} Bridge Wallet: ${bridgeWallet}`);

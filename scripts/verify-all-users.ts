@@ -16,7 +16,8 @@ async function verifyAllUsers() {
   // Get all users from the database
   const { data: users, error } = await supabase
     .from('users')
-    .select('wallet');
+    .select('wallet')
+    .eq('met_bridge_req', false) // Replace 'field_name' with the actual field you want to check for 0
 
   if (error) {
     throw new Error(`Failed to fetch users: ${error.message}`);
