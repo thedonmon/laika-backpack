@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 export interface UserRecord {
   id?: bigint;
   created_at?: string;

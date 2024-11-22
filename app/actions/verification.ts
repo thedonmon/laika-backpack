@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 'use server'
 
 import { getAssociatedTokenAddressSync } from '@solana/spl-token'
-import { Connection, PublicKey } from '@solana/web3.js'
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
+import { createClient } from '@supabase/supabase-js'
 import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
-import { Flipside } from '@flipsidecrypto/sdk'
 
-// Initialize `Flipside` with your API key
-const flipside = new Flipside(
-  process.env.FLIPSIDE_KEY!,
-  "https://api-v2.flipsidecrypto.xyz"
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET_KEY!)
 const connection = new Connection(process.env.RPC_URL!);
 
@@ -43,88 +44,75 @@ interface BridgeResult {
   message: string;
 }
 
-export async function checkBridgeBalance(userId: string): Promise<BridgeResult> {
-  const sql = `
-    WITH transfers AS (
-      SELECT
-        s.tx_to AS receiving_wallet,
-        MIN(s.block_timestamp) AS first_transfer_timestamp,
-        MAX(s.block_timestamp) AS last_transfer_timestamp,
-        COUNT(*) AS number_of_transfers,
-        SUM(s.amount :: FLOAT / POWER(10, s.decimal)) AS total_amount_transferred
-      FROM
-        eclipse.core.fact_transfers as s
-      WHERE
-        s.tx_from = 'CrfbABN2sSvmoZLu9eDDfXpaC2nHg42R7AXbHs9eg4S9'
-        AND s.mint = 'Eth1111111111111111111111111111111111111111'
-      GROUP BY
-        s.tx_to
-    ),
-    price_at_transfer AS (
-      SELECT 
-        t.*,
-        AVG(p.price) as avg_eth_price,
-        (t.total_amount_transferred * AVG(p.price)) as estimated_usd_value
-      FROM transfers t
-      LEFT JOIN ethereum.price.ez_prices_hourly p
-        ON p.HOUR BETWEEN DATEADD(hour, -1, t.last_transfer_timestamp) 
-        AND DATEADD(hour, 1, t.last_transfer_timestamp)
-        AND p.symbol = 'ETH'
-        AND p.is_native = true
-        AND p.is_deprecated = false
-      GROUP BY
-        t.receiving_wallet,
-        t.first_transfer_timestamp,
-        t.last_transfer_timestamp,
-        t.number_of_transfers,
-        t.total_amount_transferred
-    )
-    SELECT
-      receiving_wallet,
-      last_transfer_timestamp,
-      total_amount_transferred as eth_amount,
-      avg_eth_price,
-      estimated_usd_value,
-      CASE 
-        WHEN estimated_usd_value >= 490 THEN true 
-        ELSE false 
-      END as meets_threshold
-    FROM
-      price_at_transfer
-    WHERE 
-      receiving_wallet = '${userId}' AND last_transfer_timestamp >= last_transfer_timestamp >= '11/20/2024'
-    ORDER BY
-      last_transfer_timestamp DESC;
-  `;
-
+async function getEthPrice(): Promise<number> {
   try {
-    const queryResultSet = await flipside.query.run({sql: sql, maxAgeMinutes: 5});
-    
-    if (!queryResultSet?.records?.length) {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/eth-price`, {
+      next: { revalidate: 10800 }
+    });
+    const data = await response.json();
+    return data.price;
+  } catch (error) {
+    console.error('Error fetching ETH price:', error);
+    return 0;
+  }
+}
+
+export async function checkBridgeBalance(userId: string): Promise<BridgeResult> {
+  const ethPrice = await getEthPrice();
+  
+  try {
+    // Query bridge_transactions with aggregations
+    const { data: bridgeData, error } = await supabase
+      .rpc('get_bridge_stats', { wallet_address: userId })
+      .single();
+
+    if (error) {
+      console.error('Error querying bridge_transactions:', error);
       return {
         amount: 0,
         bridge_date: 0,
-        ethPrice: 0,
+        ethPrice,
         usdValue: 0,
         status: 'pending',
-        message: 'If you recently bridged, please note it may take 20-30 minutes for the transaction to be indexed.'
+        message: 'If you recently bridged, please note it may take a few minutes for the transaction to be indexed.'
       };
     }
 
-    const record = queryResultSet.records[0];
-    
-    const timestamp = record['last_transfer_timestamp'];
-    const bridgeDate = timestamp && typeof timestamp === 'string' 
-      ? new Date(timestamp).getTime() 
-      : 0;
+    //@ts-expect-error
+    if (!bridgeData?.total_bridged_amount) {
+      return {
+        amount: 0,
+        bridge_date: 0,
+        ethPrice,
+        usdValue: 0,
+        status: 'pending',
+        message: 'If you recently bridged, please note it may take a few minutes for the transaction to be indexed.'
+      };
+    }
 
-    const amount = Number(record['eth_amount']);
-    const ethPrice = Number(record['avg_eth_price']);
-    const usdValue = Number(record['estimated_usd_value']);
+    //@ts-expect-error
+    const bridgeDate = bridgeData.earliest_date 
+    //@ts-expect-error
+      ? new Date(bridgeData.earliest_date).getTime()
+      : 0;
+    
+    // Convert lamports to ETH
+    //@ts-expect-error
+    const ethAmount = Number(bridgeData.total_bridged_amount) / LAMPORTS_PER_SOL;
+    const usdValue = ethAmount * ethPrice;
+
+    console.log('Processed values:', {
+      ethAmount,
+      ethPrice,
+      usdValue,
+      bridgeDate,
+      //@ts-expect-error
+      transactionCount: bridgeData.count
+    });
 
     if (usdValue >= 490) {
       return {
-        amount,
+        amount: ethAmount,
         bridge_date: bridgeDate,
         ethPrice,
         usdValue,
@@ -136,7 +124,7 @@ export async function checkBridgeBalance(userId: string): Promise<BridgeResult> 
     if (usdValue > 0) {
       const remaining = 500 - usdValue;
       return {
-        amount,
+        amount: ethAmount,
         bridge_date: bridgeDate,
         ethPrice,
         usdValue,
@@ -148,7 +136,7 @@ export async function checkBridgeBalance(userId: string): Promise<BridgeResult> 
     return {
       amount: 0,
       bridge_date: 0,
-      ethPrice: 0,
+      ethPrice,
       usdValue: 0,
       status: 'none',
       message: 'No bridge transactions found. Bridge at least $500 to continue.'

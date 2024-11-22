@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getUserByWallet } from '@/app/actions/database'
+// import { checkBridgeBalance, checkLaikaBalance } from '@/app/actions/verification';
 
 export async function GET(
   request: Request,
@@ -7,7 +8,6 @@ export async function GET(
 ) {
   try {
     const userData = await getUserByWallet(params.wallet);
-    
     if (!userData) {
       return NextResponse.json({
         user: null,
@@ -90,3 +90,22 @@ export async function GET(
     });
   }
 } 
+
+// async function testBridgeCheck(walletId: string) {
+//   const testWallet = walletId;
+  
+//   try {
+//     console.log("Testing bridge check for wallet:", testWallet);
+    
+//     // Call the original query function
+//     const bridgeResult = await checkBridgeBalance(testWallet);
+//     console.log("Bridge check result:", JSON.stringify(bridgeResult, null, 2));
+    
+//     // If using Flipside, you can also test the query directly
+//     const laikaResult = await checkLaikaBalance(testWallet);
+//     console.log("Laika result:", JSON.stringify(laikaResult, null, 2));
+    
+//   } catch (error) {
+//     console.error("Test failed:", error);
+//   }
+// }
