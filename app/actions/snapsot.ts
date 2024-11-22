@@ -33,43 +33,30 @@ async function getLatestSignature() {
 
 async function processTransaction(confirmedSignatureInfo: any, bridgeWallets: Map<string, any>) {
   const txn = await connection.getParsedTransaction(confirmedSignatureInfo.signature);
-  if (!txn || txn.transaction.message.accountKeys.length <= 2) return;
+  if (!txn || !txn.meta?.innerInstructions) return;
 
-  // Check if the first instruction is CreateAccount
-  const firstInstruction = txn.transaction.message.instructions[0];
-  const bridgeWalletIndex = ('parsed' in firstInstruction && 
-    firstInstruction.program === "system" && 
-    firstInstruction.parsed?.type === "createAccount") ? 2 : 1;
-
-  const bridgeWallet = txn.transaction.message.accountKeys[bridgeWalletIndex].pubkey.toBase58();
-  const txnDate = new Date(confirmedSignatureInfo.blockTime! * 1000);
-
+  let bridgeWallet: string | undefined;
   let bridgedAmountInLamports = 0;
-  
-  if (!txn.meta?.innerInstructions) {
-    txn.transaction.message.instructions.forEach((instruction) => {
+
+  // Look through inner instructions to find the transfer
+  txn.meta.innerInstructions.forEach((innerInstruction) => {
+    innerInstruction.instructions.forEach((instruction) => {
       if ('parsed' in instruction && 
           instruction.program === "system" && 
           instruction.parsed?.type === "transfer") {
+        // Use the destination address of the transfer as the bridge wallet
+        bridgeWallet = instruction.parsed.info.destination;
         bridgedAmountInLamports += Number(instruction.parsed.info.lamports);
       }
     });
-  } else {
-    txn.meta.innerInstructions.forEach((innerInstruction) => {
-      innerInstruction.instructions.forEach((instruction) => {
-        if ('parsed' in instruction && 
-            instruction.program === "system" && 
-            instruction.parsed?.type === "transfer") {
-          bridgedAmountInLamports += Number(instruction.parsed.info.lamports);
-        }
-      });
-    });
-  }
+  });
 
-  if (!bridgedAmountInLamports) {
-    console.log(`Skipping transaction ${confirmedSignatureInfo.signature} - no bridge amount found`);
+  if (!bridgeWallet || !bridgedAmountInLamports) {
+    console.log(`Skipping transaction ${confirmedSignatureInfo.signature} - no bridge amount or wallet found`);
     return;
   }
+
+  const txnDate = new Date(confirmedSignatureInfo.blockTime! * 1000);
 
   // Update bridgeWallets map
   if (!bridgeWallets.has(bridgeWallet)) {
