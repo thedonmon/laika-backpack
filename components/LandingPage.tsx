@@ -315,18 +315,18 @@ Join the Quest, get rewards: firstlanding.laika.is
                           <div className="mt-4 text-sm text-gray-300">
                             {userStatus?.bridge.status === 'pending' ? (
                               <p>
-                                If you recently bridged assets, please note that it may take up to 30 minutes
+                                If you recently bridged assets, please note that it may take up to 5 minutes
                                 for transactions to be indexed. Feel free to verify again shortly. Otherwise, Stats will be calculated at the end of the campaign regardless if you verify again or not.
                               </p>
                             ) : userStatus?.bridge.status === 'partial' ? (
                               <p>
                                 You can verify again after bridging the remaining amount.
-                                Remember that new transactions may take up to 30 minutes to be indexed.
+                                Remember that new transactions may take up to 5 minutes to be indexed.
                                 Stats will be calculated at the end of the campaign regardless if you verify again or not.
                               </p>
                             ) : (
                               <p>
-                                No bridge transactions found yet. After bridging, you can wait up to 30 minutes
+                                No bridge transactions found yet. After bridging, you can wait up to 5 minutes
                                 for the transaction to be indexed before verifying again.
                                 Stats will be calculated at the end of the campaign regardless if you verify again or not.
                               </p>
