@@ -13,6 +13,12 @@ import TwitterX from '@/public/assets/twitter-x.svg'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import Footer from "@/components/Footer";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 export default function LandingPage() {
   const { connected, publicKey, signMessage, wallet } = useWallet();
@@ -365,10 +371,54 @@ Join the Quest, get rewards: firstlanding.laika.is
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Footer */}
-      <Footer />
+        {/* Add this before the Footer */}
+        <div className="w-full max-w-md mx-auto mt-12 mb-24">
+          <h2 className="text-2xl font-semibold text-center mb-6">Frequently Asked Questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1" className="border-gray-700">
+              <AccordionTrigger className="text-left">
+                What is The First Landing?
+              </AccordionTrigger>
+              <AccordionContent>
+                The First Landing is a special campaign by Eclipse and Laika where users can earn rewards by participating in the Eclipse ecosystem through bridging assets and engaging with the platform.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="border-gray-700">
+              <AccordionTrigger className="text-left">
+                How much do I need to bridge?
+              </AccordionTrigger>
+              <AccordionContent>
+                You need to bridge at least $500 worth of ETH from Ethereum to Eclipse using the official Eclipse bridge to qualify for rewards. The campaign started on November 20th, 2024 so any bridges on or after that date will count.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3" className="border-gray-700">
+              <AccordionTrigger className="text-left">
+                Why do I need Backpack wallet?
+              </AccordionTrigger>
+              <AccordionContent>
+                Backpack wallet is the recommended wallet for Eclipse ecosystem. It provides the best user experience and is required to participate in The First Landing campaign.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="border-gray-700">
+              <AccordionTrigger className="text-left">
+                How long does verification take?
+              </AccordionTrigger>
+              <AccordionContent>
+                {`You only need to verify ONCE! While verification is instant, your bridge transaction might take up to 15 minutes to be indexed in our system. 
+                Don't worry if you verify and don't see your bridge amount right away - we continuously reindex all transactions and will update everyone's stats automatically. 
+                There's no need to verify multiple times (you can if you'd like), as we'll catch all qualifying bridge transactions in our final calculation.`}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        {/* Footer */}
+        <Footer />
+      </div>
     </main>
   );
 } 
