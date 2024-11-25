@@ -381,7 +381,7 @@ Join the Quest, get rewards: firstlanding.laika.is
                 What is The First Landing?
               </AccordionTrigger>
               <AccordionContent>
-                The First Landing is a special campaign by Eclipse and Laika where users can earn rewards by participating in the Eclipse ecosystem through bridging assets and engaging with the platform.
+                The First Landing is a special campaign by Eclipse, Backpack, and Laika where elligible participants may be entitled to a share of Laika rewards!
               </AccordionContent>
             </AccordionItem>
 
