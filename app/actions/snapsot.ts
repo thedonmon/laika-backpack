@@ -150,6 +150,7 @@ export async function updateBridgeData() {
 
   await workerQueue.onIdle();
   console.log("Incremental update completed");
+  return lastSignature;
 }
 
 export async function* getAllSignaturesForAddress(
