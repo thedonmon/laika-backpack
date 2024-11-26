@@ -1,8 +1,8 @@
-import { backfillBridgeData } from "@/app/actions/snapsot";
+import { updateBridgeData } from "@/app/actions/snapsot";
 
 
 console.log('Starting backfill...');
-backfillBridgeData()
+updateBridgeData()
   .then(() => {
     console.log('Backfill complete!');
     process.exit(0);
