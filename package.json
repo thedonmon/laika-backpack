@@ -12,6 +12,7 @@
     "@flipsidecrypto/sdk": "^2.1.0",
     "@next/third-parties": "^15.0.3",
     "@radix-ui/react-accordion": "^1.2.1",
+    "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-progress": "^1.1.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@solana/spl-token": "^0.4.9",
